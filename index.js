@@ -28,12 +28,29 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    // Connect the client to the server	(optional starting in v4.7)
+
     await client.connect(); // server update time this line delete
 
+    // user
+    const userData = client.db("library").collection("user");
+    app.post('/user' , async (req, res) => {
+        const body = req.body;
+        console.log(body);
+        const result = await userData.insertOne(body);
+        res.send(result);
+    })
+
+    // category
     const categoryData = client.db("library").collection("category");
     app.get('/category' , async(req, res )=>{
         const result = await categoryData.find().toArray();
+        res.send(result);
+    })
+
+    // writer
+    const writerData = client.db("library").collection("writer");
+    app.get('/writer' , async(req, res)=>{
+        const result = await writerData.find().toArray();
         res.send(result);
     })
 

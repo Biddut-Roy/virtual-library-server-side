@@ -1,8 +1,9 @@
 const express = require('express');
 const app = express()
 require('dotenv').config();
-const cookieParser = require('cookie-parser')
 const cors = require('cors')
+const jwt = require('jsonwebtoken');
+const cookieParser = require('cookie-parser')
 const port = process.env.PORT || 5000
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
@@ -18,7 +19,8 @@ app.use(express.json())
 app.use(cookieParser())
 
 app.get('/', (req, res) => {
-    res.send(process.env.APP_TOKEN_ACCESS)
+    res.send('check')
+    console.log(process.env.APP_TOKEN_SECRET);
 })
 
 
@@ -34,15 +36,31 @@ const client = new MongoClient(uri, {
     }
 });
 
+
+// create  middleware
+const verifyToken = async (req, res, next) => {
+    const token = req.cookies.token;
+    if (!token) {
+        return res.status(401).send({ message: 'not authorized' });
+    }
+    jwt.verify(token, process.env.APP_TOKEN_SECRET, (err, decoded) => {
+        if (err) {
+            return res.status(401).send({ message: 'unauthorized' });
+        }
+        req.user = decoded;
+        next();
+    })
+};
+
 async function run() {
     try {
 
         await client.connect(); // server update time this line delete
 
         //  auth token create
-        app.post("/jwt",  async (req, res) => {
+        app.post("/jwt", async (req, res) => {
             const body = req.body;
-            const token = jwt.sign(body, process.env.APP_TOKEN_ACCESS, { expiresIn: '1h' });
+            const token = jwt.sign(body, process.env.APP_TOKEN_SECRET, { expiresIn: '1h' });
             res
                 .cookie("token", token, {
                     httpOnly: true,
@@ -51,7 +69,7 @@ async function run() {
                 })
                 .send({ success: true });
         })
-// token clear
+        // token clear
         app.post('/logout', async (req, res) => {
             const body = req.body;
             res.clearCookie('token', {
@@ -59,7 +77,7 @@ async function run() {
                 httpOnly: false,
                 secure: true,
                 sameSite: 'none'
-            }).send({ success: true });
+            }).send({ clear: true });
         })
 
         // user
@@ -88,18 +106,16 @@ async function run() {
         // Books collection
         const booksData = client.db("library").collection("books");
 
-        app.get("/allBook", async (req, res) => { 
-        
+        app.get("/allBook", async (req, res) => {
             const result = await booksData.find({}).toArray();
-            // const filter = result.filter(x=>x.quantity > 0)    // {quantity :{$ge : 0}} not working ejoono bikolpo 
+            // const filter = result.filter(x=>x.quantity > 0)    // {quantity :{$ge : 0}} not working  
             res.send(result);
 
         });
 
-        app.get("/sortBook", async (req, res) => { 
-        
+        app.get("/sortBook", async (req, res) => {
             const result = await booksData.find({}).toArray();
-            const filter = result.filter(x=>x.quantity > 0)    // {quantity :{$ge : 0}} not working ejoono bikolpo 
+            const filter = result.filter(x => x.quantity > 0)    // {quantity :{$ge : 0}} not working  
             res.send(filter);
 
         });
@@ -118,7 +134,7 @@ async function run() {
             res.send(result);
         });
 
-        app.post('/books', async (req, res) => {
+        app.post('/books',verifyToken, async (req, res) => {
             const body = req.body;
             const result = await booksData.insertOne(body);
             res.send(result);
@@ -128,23 +144,22 @@ async function run() {
         app.patch('/item-update/:id', async (req, res) => {
             const id = req.params.id;
             const body = req.body;
-            const filter = { _id: new ObjectId(id)};
+            const filter = { _id: new ObjectId(id) };
             const update = {
-                $set:{
+                $set: {
                     quantity: body.qnt,
                 }
             }
             const result = await booksData.updateOne(filter, update);
-
             res.send(result);
         })
-//  update books
+        //  update books
         app.patch('/update/:id', async (req, res) => {
             const id = req.params.id;
             const body = req.body;
-            const filter = { _id: new ObjectId(id)};
+            const filter = { _id: new ObjectId(id) };
             const update = {
-                $set:{
+                $set: {
                     quantity: body.quantity,
                     name: body.name,
                     author: body.author,
@@ -160,9 +175,12 @@ async function run() {
 
         //  My cards (CURD operation)
         const borrowData = client.db("library").collection("borrow");
-        app.get('/borrow', async (req, res) => {
+        app.get('/borrows', verifyToken, async (req, res) => {
             const email = req.query.email;
-            const filter = { email : email }
+            if (req.query?.email !== req.user.email) {
+                return res.status(401).send({ message: 'access unauthorized' });
+            }
+            const filter = { email: email }
             const result = await borrowData.find(filter).toArray();
             res.send(result);
         });
@@ -175,10 +193,10 @@ async function run() {
 
         app.delete('/borrow/:id', async (req, res) => {
             const id = req.params.id;
-            const query = {_id: id};
+            const query = { _id: new ObjectId(id) };
             const result = await borrowData.deleteOne(query);
             res.send(result);
-   
+
         });
 
 

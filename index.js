@@ -1,16 +1,24 @@
 const express = require('express');
 const app = express()
 require('dotenv').config();
+const cookieParser = require('cookie-parser')
 const cors = require('cors')
 const port = process.env.PORT || 5000
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 // middleware
-app.use(cors())
+app.use(cors({
+    origin: [
+        'http://localhost:5173',
+        'http://localhost:5174',
+    ],
+    credentials: true,
+}));
 app.use(express.json())
+app.use(cookieParser())
 
 app.get('/', (req, res) => {
-    res.send('Hello World!')
+    res.send(process.env.APP_TOKEN_ACCESS)
 })
 
 
@@ -30,6 +38,29 @@ async function run() {
     try {
 
         await client.connect(); // server update time this line delete
+
+        //  auth token create
+        app.post("/jwt",  async (req, res) => {
+            const body = req.body;
+            const token = jwt.sign(body, process.env.APP_TOKEN_ACCESS, { expiresIn: '1h' });
+            res
+                .cookie("token", token, {
+                    httpOnly: true,
+                    secure: true,
+                    sameSite: 'none'
+                })
+                .send({ success: true });
+        })
+// token clear
+        app.post('/logout', async (req, res) => {
+            const body = req.body;
+            res.clearCookie('token', {
+                maxAge: 0,
+                httpOnly: false,
+                secure: true,
+                sameSite: 'none'
+            }).send({ success: true });
+        })
 
         // user
         const userData = client.db("library").collection("user");
@@ -56,9 +87,21 @@ async function run() {
 
         // Books collection
         const booksData = client.db("library").collection("books");
-        app.get("/addBook", async (req, res) => {
-            const result = await booksData.find().toArray();
+
+        app.get("/allBook", async (req, res) => { 
+        
+            const result = await booksData.find({}).toArray();
+            // const filter = result.filter(x=>x.quantity > 0)    // {quantity :{$ge : 0}} not working ejoono bikolpo 
             res.send(result);
+
+        });
+
+        app.get("/sortBook", async (req, res) => { 
+        
+            const result = await booksData.find({}).toArray();
+            const filter = result.filter(x=>x.quantity > 0)    // {quantity :{$ge : 0}} not working ejoono bikolpo 
+            res.send(filter);
+
         });
 
         app.get('/categorybooks/:category', async (req, res) => {

@@ -82,11 +82,9 @@ async function run() {
         })
 
         //  update quantity
-
         app.patch('/item-update/:id', async (req, res) => {
             const id = req.params.id;
             const body = req.body;
-            console.log(body.qnt);
             const filter = { _id: new ObjectId(id)};
             const update = {
                 $set:{
@@ -97,11 +95,32 @@ async function run() {
 
             res.send(result);
         })
+//  update books
+        app.patch('/update/:id', async (req, res) => {
+            const id = req.params.id;
+            const body = req.body;
+            const filter = { _id: new ObjectId(id)};
+            const update = {
+                $set:{
+                    quantity: body.quantity,
+                    name: body.name,
+                    author: body.author,
+                    photo: body.photo,
+                    category: body.category,
+                    rating: body.rating,
+                }
+            }
+            const result = await booksData.updateOne(filter, update);
+
+            res.send(result);
+        })
 
         //  My cards (CURD operation)
         const borrowData = client.db("library").collection("borrow");
         app.get('/borrow', async (req, res) => {
-            const result = await borrowData.find().toArray();
+            const email = req.query.email;
+            const filter = { email : email }
+            const result = await borrowData.find(filter).toArray();
             res.send(result);
         });
 
@@ -109,6 +128,14 @@ async function run() {
             const body = req.body;
             const result = await borrowData.insertOne(body);
             res.send(result);
+        });
+
+        app.delete('/borrow/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = {_id: id};
+            const result = await borrowData.deleteOne(query);
+            res.send(result);
+   
         });
 
 

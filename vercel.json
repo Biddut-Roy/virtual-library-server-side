@@ -1,0 +1,18 @@
+{
+    "version": 2,
+    "name": "books-library",
+    "builds": [
+       { 
+        
+       "src": "index.js",
+        "use": "@vercel/node"
+     }
+    ],
+    "routes": [
+       { 
+         "src": "/(.*)",
+         "dest": "/",
+         "methods": ["GET", "OPTIONS" , "POST", "PATCH", "PUT", "DELETE"]
+        }
+    ]
+ }

@@ -83,8 +83,8 @@ app.post("/jwt", async (req, res) => {
     res
         .cookie('token', token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+            secure: true,
+            sameSite:'none'
         })
         .send({ success: true })
 })
@@ -101,11 +101,18 @@ app.post('/logout', async (req, res) => {
 
 
 // user
-app.put('/user', async (req, res) => {
+app.post('/user', async (req, res) => {
     const body = req.body;
     const result = await userData.insertOne(body);
     res.send(result);
 })
+
+app.put('/users', async (req, res) => {
+    const body = req.body;
+    const result = await userData.insertOne(body);
+    res.send(result);
+})
+
 
 // app.get('/userRoll', async (req, res) => {
 //     const email = req.query.email;

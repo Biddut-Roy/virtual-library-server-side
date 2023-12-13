@@ -121,11 +121,10 @@ app.put('/users', async (req, res) => {
 //  Check Admin 
 app.get('/api/users/admin/:email',verifyToken,async (req, res) => {
     const email = req.params?.email;
-    console.log(email);
     const query = { email: email }
     const user = await userData.findOne(query)
     let isAdmin = false;
-        if (user?._doc.roll === 'admin') {
+        if (user?.roll === 'admin') {
             isAdmin = true
         }
  
@@ -133,13 +132,6 @@ app.get('/api/users/admin/:email',verifyToken,async (req, res) => {
 })
 
 
-// app.get('/userRoll', async (req, res) => {
-//     const email = req.query.email;
-//     console.log(email);
-//     const query = {email: email}
-//     const result = await userData.findOne(body);
-//     res.send(result);
-// })
 
 // category
 app.get('/category', async (req, res) => {
@@ -250,9 +242,21 @@ app.delete('/borrow/:id', async (req, res) => {
 
 //  Donation book collect
 
+app.get('/donate', async (req, res) => {
+    const result = await booksDonateData.find().toArray();
+    res.send(result);
+})
+
 app.post('/donate', verifyToken, async (req, res) => {
     const body = req.body;
     const result = await booksDonateData.insertOne(body);
+    res.send(result);
+})
+
+app.delete('/DonateDelete/:id', verifyToken, async (req, res) => {
+    const id = req.params.id;
+    const query = { _id: new ObjectId(id) };
+    const result = await booksDonateData.deleteOne(query);
     res.send(result);
 })
 

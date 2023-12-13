@@ -45,12 +45,13 @@ const dbConnect = async () => {
     }
 }
 dbConnect()
+
 const writerData = client.db("library").collection("writer");
 const borrowData = client.db("library").collection("borrow");
 const booksData = client.db("library").collection("books");
 const categoryData = client.db("library").collection("category");
 const userData = client.db("library").collection("user");
-
+const booksDonateData = client.db("library").collection("donate");
 
 
 
@@ -84,7 +85,11 @@ app.post("/jwt", async (req, res) => {
         .cookie('token', token, {
             httpOnly: true,
             secure: true,
-            sameSite:'none'
+            sameSite: 'none'
+
+            // httpOnly: true,
+            // secure: process.env.NODE_ENV === "production" ? true : false,
+            // sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",               {token not working solver}
         })
         .send({ success: true })
 })
@@ -113,6 +118,20 @@ app.put('/users', async (req, res) => {
     res.send(result);
 })
 
+//  Check Admin 
+app.get('/api/users/admin/:email',verifyToken,async (req, res) => {
+    const email = req.params?.email;
+    console.log(email);
+    const query = { email: email }
+    const user = await userData.findOne(query)
+    let isAdmin = false;
+        if (user?._doc.roll === 'admin') {
+            isAdmin = true
+        }
+ 
+    res.send({ isAdmin , user })
+})
+
 
 // app.get('/userRoll', async (req, res) => {
 //     const email = req.query.email;
@@ -136,7 +155,7 @@ app.get('/writer', async (req, res) => {
 
 // Books collection
 
-app.get("/allBook", verifyToken, async (req, res) => {
+app.get("/allBook",verifyToken, async (req, res) => {
     const result = await booksData.find({}).toArray();
     // const filter = result.filter(x=>x.quantity > 0)    // {quantity :{$ge : 0}} not working  
     res.send(result);
@@ -228,6 +247,16 @@ app.delete('/borrow/:id', async (req, res) => {
     res.send(result);
 
 });
+
+//  Donation book collect
+
+app.post('/donate', verifyToken, async (req, res) => {
+    const body = req.body;
+    const result = await booksDonateData.insertOne(body);
+    res.send(result);
+})
+
+
 
 
 
